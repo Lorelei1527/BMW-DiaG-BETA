@@ -59,6 +59,18 @@ public class DiagSession {
 
     public void setSgbdLiveItems(List<String> keys) { opt.sgbdLiveItems = keys == null ? null : new ArrayList<>(keys); }
 
+    /** กล่องนี้มีค่า Lambda จริง (เซ็นเซอร์ไวด์แบนด์) ให้คำนวณ AFR ได้ */
+    private Boolean hasLambda;
+
+    private boolean hasLambda() {
+        if (hasLambda == null) {
+            hasLambda = false;
+            if (isSgbd()) for (com.tms.bmwediag.sgbd.SgbdRunner.LiveItem it : sgbd.liveCatalog())
+                if (com.tms.bmwediag.sgbd.ThaiLabels.base(it.result).startsWith("LAMSONI")) hasLambda = true;
+        }
+        return hasLambda;
+    }
+
     public List<String> sgbdLiveItems() {
         if (opt.sgbdLiveItems == null && isSgbd()) opt.sgbdLiveItems = sgbd.defaultLiveKeys();
         return opt.sgbdLiveItems == null ? new ArrayList<>() : opt.sgbdLiveItems;
@@ -522,6 +534,16 @@ public class DiagSession {
                             if (x.value instanceof Double) txt = fmt((Double) x.value);
                             com.tms.bmwediag.sgbd.Sgbd.Result t = set.get(base + "_TEXT");
                             if (t != null && !rn.endsWith("_TEXT") && !t.asText().trim().isEmpty()) txt = txt + "  " + t.asText().trim();
+                            String cb = com.tms.bmwediag.sgbd.ThaiLabels.base(rn);
+                            if (v != null && (cb.equals("LAMSONI") || cb.equals("LAMSONI2"))) {
+                                // Lambda → AFR (เบนซิน 14.7:1)
+                                double lam = v > 5 ? v / 1000.0 : v; // บางกล่องส่งเป็น 1/1000
+                                double afr = lam * 14.7;
+                                rd = new Reading(it.label, "AFR", afr, String.format(java.util.Locale.US, "%.1f", afr));
+                                continue;
+                            }
+                            if (v != null && unit.equalsIgnoreCase("V") && it.label.startsWith("O2") && (cb.contains("NKAT") || cb.endsWith("_H") || cb.startsWith("USHK") || !hasLambda()))
+                                txt = txt + "  " + (v > 0.60 ? "หนา" : v < 0.30 ? "บาง" : "พอดี");
                             rd = new Reading(it.label, unit, v, txt);
                         }
                         got.put(it.key(), rd != null ? rd : new Reading(it.label, "", null, "--"));

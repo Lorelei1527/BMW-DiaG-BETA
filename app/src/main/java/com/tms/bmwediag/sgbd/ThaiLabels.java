@@ -79,7 +79,7 @@ public final class ThaiLabels {
         e("DWKR", "องศาที่ถอยจากน็อค (เฉลี่ย)"); e("TUMG", "อุณหภูมิภายนอก"); e("FHO", "ค่าชดเชยความสูง");
         e("DLAHI", "ค่าปรับ Lambda จาก O2 หลังแคต B1"); e("DLAHI2", "ค่าปรับ Lambda จาก O2 หลังแคต B2");
         e("FRA", "ค่าเรียนรู้ส่วนผสม (คูณ) B1"); e("FRA2", "ค่าเรียนรู้ส่วนผสม (คูณ) B2");
-        e("LAMSONI", "ค่า Lambda จริง B1"); e("LAMSONI2", "ค่า Lambda จริง B2");
+        e("LAMSONI", "AFR อากาศ:น้ำมัน B1"); e("LAMSONI2", "AFR อากาศ:น้ำมัน B2");
         e("RLSOL", "โหลดเป้าหมาย"); e("TE2", "เวลาฉีดน้ำมัน B2"); e("WPED", "ตำแหน่งคันเร่ง (%)"); e("ZWIST", "องศาจุดระเบิดจริง");
         e("MIMIN", "แรงบิดต่ำสุด"); e("NSOLFASTA", "รอบเดินเบาเป้าหมาย"); e("WDKBAFASTA", "มุมลิ้นปีกผีเสื้อ");
         e("EVHUBI", "Valvetronic ระยะยกวาล์ว จริง"); e("EVHUBI2", "Valvetronic ระยะยกวาล์ว จริง B2"); e("EVHUBS", "Valvetronic ระยะยกวาล์ว เป้าหมาย");

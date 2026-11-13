@@ -599,6 +599,7 @@ public class MainActivity extends Activity {
         if (u.equals("ms")) return new double[]{0, 20};
         if (u.equals("%") || u.startsWith("%")) return new double[]{0, 100};
         if (u.equals("°")) return new double[]{-20, 60};
+        if (u.equals("afr")) return new double[]{10, 20};
         return null;
     }
 
@@ -610,6 +611,7 @@ public class MainActivity extends Activity {
             if (u.equals("v") && (r.name.contains("แบต")) && r.value < 11.8) return M_RED;
         }
         if (r.name.contains("น็อค") || r.name.contains("Misfire")) return M_RED;
+        if (u.equals("afr") && r.value != null) return r.value < 13.5 ? M_RED : r.value > 15.5 ? WARN : OK;
         if (u.equals("°c")) return WARN;
         if (u.equals("%") || u.equals("kg/h") || u.equals("°")) return M_BLUE;
         return M_LIGHT;

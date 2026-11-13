@@ -247,6 +247,8 @@ public class SgbdRunner {
             {"*น็อค", "RKRN0", "RKRN1", "RKRN2", "RKRN3", "RKRN4", "RKRN5", "RKRN6", "RKRN7",
                     "K_MW_1", "K_MW_2", "K_MW_3", "K_MW_4", "K_MW_5", "K_MW_6"},
             {"การฉีด", "TE", "EINSPRITZZEIT"},
+            {"AFR B1", "LAMSONI"},
+            {"AFR B2", "LAMSONI2"},
             {"O2 หน้า B1", "L_SONDE", "LS_VKAT_SIGNAL_1", "USVK", "UULSUV"},
             {"O2 หน้า B2", "L_SONDE_2", "LS_VKAT_SIGNAL_2", "USVK2", "UULSUV2"},
             {"O2 หลัง B1", "L_SONDE_H", "LS_NKAT_SIGNAL_1", "USHK"},
