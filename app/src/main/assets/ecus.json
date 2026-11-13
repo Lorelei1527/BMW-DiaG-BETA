@@ -1,0 +1,159 @@
+{
+ "_readme": [
+  "BMW DIAG (Beta test) By TMS — รายการกล่องที่รองรับ",
+  "sgbd = ชื่อไฟล์ SGBD (.prg) ที่ใช้เมื่อเลือกโฟลเดอร์ SGBD แล้ว"
+ ],
+ "ecus": [
+  {
+   "id": "ms42",
+   "name": "DME MS42 — M52TU / M54 รุ่นแรก (E46/E39)",
+   "protocol": "OBD",
+   "address": "12",
+   "sgbd": "MS420DS0",
+   "link": "USB",
+   "notes": "สาย K+DCAN USB (โหมด K-line) — อ่าน/ลบโค้ด + data สด ผ่าน SGBD ของคุณ; ไม่มี SGBD จะใช้ OBD2 แทน"
+  },
+  {
+   "id": "ms43",
+   "name": "DME MS43 — M54 (E46/E39/E53/E83/E85)",
+   "protocol": "OBD",
+   "address": "12",
+   "sgbd": "MS430DS0",
+   "link": "USB",
+   "notes": "สาย K+DCAN USB (โหมด K-line) — อ่าน/ลบโค้ด + data สด ผ่าน SGBD ของคุณ; ไม่มี SGBD จะใช้ OBD2 แทน"
+  },
+  {
+   "id": "me92",
+   "name": "DME ME9.2 — N42 / N46 (E46)",
+   "protocol": "OBD",
+   "address": "12",
+   "sgbd": "ME9K_NG4",
+   "link": "USB",
+   "notes": "สาย K+DCAN USB (โหมด K-line) — อ่าน/ลบโค้ด + data สด ผ่าน SGBD ของคุณ; ไม่มี SGBD จะใช้ OBD2 แทน"
+  },
+  {
+   "id": "ms45",
+   "name": "DME MS45 / MS45.1 — M54 รุ่นหลัง (E83/E85/E46)",
+   "protocol": "OBD",
+   "address": "12",
+   "sgbd": "MS450DS0",
+   "link": "USB",
+   "notes": "สาย K+DCAN USB (โหมด K-line) — อ่าน/ลบโค้ด + data สด ผ่าน SGBD ของคุณ; ไม่มี SGBD จะใช้ OBD2 แทน"
+  },
+  {
+   "id": "mev92",
+   "name": "DME MEV9.2 — N46 (E90/E87)",
+   "protocol": "OBD",
+   "address": "12",
+   "sgbd": "MEV9N46",
+   "can": true,
+   "link": "ELM",
+   "notes": "ELM327 Bluetooth (D-CAN) — อ่าน/ลบโค้ด + data สด ผ่าน SGBD; ไม่มี SGBD จะใช้ OBD2 แทน (สาย K+DCAN โหมด D-CAN ยังไม่รองรับ)"
+  },
+  {
+   "id": "gs20",
+   "name": "เกียร์ GS20 (A5S360/390)",
+   "protocol": "AUTO",
+   "address": "32",
+   "baud": 9600,
+   "parity": "E",
+   "ident": [
+    "00"
+   ],
+   "faultRead": [
+    "04 01"
+   ],
+   "faultClear": "05",
+   "notes": "สาย K+DCAN USB (โหมด K-line) — DS2 address 0x32",
+   "live": [
+    {
+     "request": "0B",
+     "skip": 1,
+     "showRaw": true
+    }
+   ],
+   "sgbd": "GS20",
+   "link": "USB",
+   "faultText": {
+    "0x01": "โซลินอยด์คุมแรงดัน EDS 1",
+    "0x04": "โซลินอยด์คุมแรงดัน EDS 4",
+    "0x10": "โซลินอยด์วาล์ว 1",
+    "0x11": "โซลินอยด์วาล์ว 2",
+    "0x12": "โซลินอยด์วาล์ว 3",
+    "0x13": "แม่เหล็กล็อกคันเกียร์ (Shift-Lock)",
+    "0x20": "เซนเซอร์รอบเพลาออก (n-ab)",
+    "0x21": "เซนเซอร์รอบเทอร์ไบน์",
+    "0x22": "เซนเซอร์อุณหภูมิน้ำมันเกียร์",
+    "0x30": "คลัตช์ล็อกทอร์คคอนเวอร์เตอร์ ลื่นมากเกินไป",
+    "0x32": "ตรวจเกียร์ 1",
+    "0x34": "ตรวจเกียร์ 2",
+    "0x35": "ตรวจเกียร์ 3",
+    "0x36": "ตรวจเกียร์ 4",
+    "0x37": "ตรวจเกียร์ 5",
+    "0x3B": "รอบ Stall (Stalling speed)",
+    "0x3C": "สวิตช์ตำแหน่งเกียร์",
+    "0x3D": "น้ำมันเกียร์เสื่อม",
+    "0x3F": "สัญญาณเบรก (ทางสายไฟ)",
+    "0x50": "กล่อง Error ภายใน 1 (EPROM)",
+    "0x51": "กล่อง Error ภายใน 2 (EEPROM)",
+    "0x52": "กล่อง Error ภายใน 3 (Watchdog)",
+    "0x53": "กล่อง Error ภายใน 4 (FET1)",
+    "0x54": "กล่อง Error ภายใน 5 (FET2)",
+    "0x60": "ไฟเลี้ยงกล่อง KL87",
+    "0x70": "สวิตช์โปรแกรม",
+    "0x71": "สวิตช์ Kick-Down",
+    "0x72": "สวิตช์ Steptronic",
+    "0x78": "ครูสคอนโทรล (FGR)",
+    "0x80": "ตรวจ CAN-Bus",
+    "0x81": "CAN ไม่มีข้อความ DME",
+    "0x82": "CAN ไม่มีข้อความ ASC",
+    "0x83": "CAN ไม่มีข้อความหน้าปัด",
+    "0x90": "CAN เวอร์ชันไม่ตรงกัน",
+    "0x91": "CAN สัญญาณลดแรงบิด",
+    "0x92": "CAN สัญญาณแรงบิด",
+    "0x93": "CAN สัญญาณลิ้นปีกผีเสื้อ (ลิ้นเร่ง)",
+    "0x94": "CAN สัญญาณอุณหภูมิเครื่อง",
+    "0x95": "CAN สัญญาณความเร็วล้อ",
+    "0x96": "CAN สัญญาณรอบเครื่อง",
+    "0x97": "CAN สัญญาณเบรก",
+    "0xFF": "ไม่ทราบตำแหน่ง Error",
+    "0x02": "Pressure controller EDS 2",
+    "0x03": "Pressure controller EDS 3",
+    "0x0F": "Pressure controller EDS Total current",
+    "0x31": "Symptom gear check",
+    "0x33": "Gear Check 1M",
+    "0x38": "Symptom GLUE",
+    "0x39": "GLUE-check 2/3",
+    "0x3A": "GLUE-check 3/4",
+    "0x3E": "Double error: output- & wheel-speed",
+    "0x41": "Gear Check 4 (ENP)",
+    "0x61": "V-Batt. supply Cl. 30"
+   }
+  },
+  {
+   "id": "gs8604",
+   "name": "เกียร์ GS8.60.4 (ZF 5HP19)",
+   "protocol": "AUTO",
+   "address": "32",
+   "baud": 9600,
+   "parity": "E",
+   "ident": [
+    "00"
+   ],
+   "faultRead": [
+    "04 01"
+   ],
+   "faultClear": "05",
+   "notes": "สาย K+DCAN USB (โหมด K-line) — DS2 address 0x32",
+   "live": [
+    {
+     "request": "0B",
+     "skip": 1,
+     "showRaw": true
+    }
+   ],
+   "sgbd": "GS8604",
+   "link": "USB"
+  }
+ ]
+}

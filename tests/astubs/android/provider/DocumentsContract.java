@@ -1,0 +1,2 @@
+package android.provider;
+public final class DocumentsContract { public static String getTreeDocumentId(android.net.Uri u){return null;} public static android.net.Uri buildChildDocumentsUriUsingTree(android.net.Uri u,String id){return null;} public static android.net.Uri buildDocumentUriUsingTree(android.net.Uri u,String id){return null;} public static final class Document { public static final String COLUMN_DOCUMENT_ID="", COLUMN_DISPLAY_NAME=""; } }

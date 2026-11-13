@@ -1,0 +1,2 @@
+package android.hardware.usb;
+public final class UsbConstants { public static final int USB_ENDPOINT_XFER_BULK=2, USB_DIR_IN=0x80; }

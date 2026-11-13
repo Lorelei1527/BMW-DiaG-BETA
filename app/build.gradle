@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.tms.bmwediag'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.tms.bmwdiag'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.9-beta'
+    }
+
+    signingConfigs {
+        // keystore คงที่ — ติดตั้งเวอร์ชันใหม่ทับเวอร์ชันเก่าได้โดยไม่ต้องถอนแอป
+        tms {
+            storeFile file('tms-beta.jks')
+            storePassword 'tmsbeta123'
+            keyAlias 'tms'
+            keyPassword 'tmsbeta123'
+        }
+    }
+
+    buildTypes {
+        debug { signingConfig signingConfigs.tms }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.tms
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError false }
+}
