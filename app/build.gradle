@@ -15,7 +15,6 @@ android {
     }
 
     signingConfigs {
-        // keystore คงที่ — ติดตั้งเวอร์ชันใหม่ทับเวอร์ชันเก่าได้โดยไม่ต้องถอนแอป
         tms {
             storeFile file('tms-beta.jks')
             storePassword 'tmsbeta123'
@@ -25,10 +24,10 @@ android {
     }
 
     buildTypes {
-        debug { signingConfig signingConfigs.tms }
+        debug { if (file('tms-beta.jks').exists()) signingConfig signingConfigs.tms }
         release {
             minifyEnabled false
-            signingConfig signingConfigs.tms
+            signingConfig file('tms-beta.jks').exists() ? signingConfigs.tms : signingConfigs.debug
         }
     }
 
