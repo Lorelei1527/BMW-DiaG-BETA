@@ -48,6 +48,14 @@ public class ElmCanInterface extends EdInterface {
 
     @Override
     public byte[] transmit(byte[] req) throws SgbdException {
+        byte[] hit = cached(req);
+        if (hit != null) return hit;
+        byte[] r = transmitReal(req);
+        remember(req, r);
+        return r;
+    }
+
+    private byte[] transmitReal(byte[] req) throws SgbdException {
         try {
             init();
             if (req.length < 4) throw new IOException("telegram too short");

@@ -74,6 +74,11 @@ public class SgbdRunner {
 
     public boolean ready() { return variant != null; }
 
+    /** เริ่ม/จบรอบอ่าน live data: คำสั่งที่ซ้ำกันในรอบเดียวส่งไปกล่องครั้งเดียว */
+    public void beginCycle() { if (iface != null) iface.beginCycle(); }
+
+    public void endCycle() { if (iface != null) iface.endCycle(); }
+
     public List<String> jobs() { return variant == null ? new ArrayList<>() : variant.jobNames(); }
 
     public boolean hasJob(String j) { return variant != null && variant.hasJob(j); }
@@ -94,15 +99,41 @@ public class SgbdRunner {
         return n.equals("TELEGRAMM") || n.equals("JOB_STATUS") || n.startsWith("_");
     }
 
-    /** ผล IDENT เป็นบรรทัดอ่านง่าย */
+    /** ผล IDENT เป็นบรรทัดอ่านง่าย (มี VIN ด้านบน) */
     public List<String> identLines() throws SgbdException {
         List<String> out = new ArrayList<>();
         out.add("SGBD: " + variantName);
+        String vin = vin();
+        out.add("VIN (เลขตัวถัง): " + (vin == null || vin.isEmpty() ? "อ่านไม่ได้" : vin));
         List<Map<String, Sgbd.Result>> r = run("IDENT", "");
         for (int i = 1; i < r.size(); i++)
             for (Sgbd.Result x : r.get(i).values())
                 if (!isMeta(x.name)) out.add(label(x.name) + ": " + x.asText());
         return out;
+    }
+
+    /** อ่าน VIN ที่เก็บในกล่อง (AIF_LESEN → C_FG_LESEN → IDENT_AIF) */
+    public String vin() {
+        String[][] tries = {{"AIF_LESEN", "AIF_FG_NR_LANG"}, {"AIF_LESEN", "AIF_FG_NR"}, {"C_FG_LESEN", "FG_NR"},
+                {"IDENT_AIF", "AIF_FAHRGESTELL_NR"}, {"FG_LESEN", "FG_NR"}};
+        String lastJob = null;
+        List<Map<String, Sgbd.Result>> r = null;
+        for (String[] t : tries) {
+            if (!hasJob(t[0])) continue;
+            try {
+                if (!t[0].equals(lastJob)) { r = run(t[0], ""); lastJob = t[0]; }
+                for (int i = 1; i < r.size(); i++) {
+                    Sgbd.Result x = r.get(i).get(t[1]);
+                    if (x == null) continue;
+                    String v = x.asText().trim();
+                    if (v.length() >= 7 && !v.matches("[-\\s0F]*") && !v.matches("[\\x00-\\x1F\\xFF]*")) return v;
+                }
+            } catch (SgbdException e) {
+                log("อ่าน VIN (" + t[0] + ") ไม่ได้: " + e.getMessage());
+                lastJob = null;
+            }
+        }
+        return null;
     }
 
     private static String label(String n) {
@@ -117,6 +148,12 @@ public class SgbdRunner {
             case "ID_LIEF_NR": return "รหัสผู้ผลิต";
             case "ID_LIEF_TEXT": return "ผู้ผลิต";
             case "ID_SW_NR": return "Software";
+            case "ID_SG_ADR": return "Address กล่อง";
+            case "ID_LIEF_NR_TEXT": return "ผู้ผลิต";
+            case "ID_VAR_INDEX": return "Variant index";
+            case "ID_ZIF": return "ZIF";
+            case "ID_ZIF_BACKUP": return "ZIF backup";
+            case "ID_HW_REF": return "Hardware ref";
             default: return n;
         }
     }
@@ -186,5 +223,84 @@ public class SgbdRunner {
                 l.add(j);
         }
         return l;
+    }
+
+    /** ค่า live data หนึ่งรายการ (job + ชื่อผล) */
+    public static final class LiveItem {
+        public final String job, result, label, comment;
+        LiveItem(String j, String r, String l, String c) { job = j; result = r; label = l; comment = c; }
+        public String key() { return job + "|" + result; }
+    }
+
+    private List<LiveItem> catalog;
+
+    /** รายการค่า live data ทั้งหมดที่เลือกได้ (ชื่อภาษาไทย) — ค่าที่มีใน job บล็อกใหญ่จะใช้ job นั้นก่อน */
+    public List<LiveItem> liveCatalog() {
+        if (catalog != null) return catalog;
+        catalog = new ArrayList<>();
+        if (variant == null) return catalog;
+        Map<String, List<String[]>> desc = variant.jobResults();
+        List<String> js = new ArrayList<>();
+        for (String j : statusJobs()) if (!variant.jobHasArgs(j) && desc.containsKey(j.toUpperCase(Locale.ROOT))) js.add(j);
+        // job ที่คืนค่าหลายตัวก่อน (อ่านทีเดียวได้หลายค่า)
+        js.sort((a, b) -> desc.get(b.toUpperCase(Locale.ROOT)).size() - desc.get(a.toUpperCase(Locale.ROOT)).size());
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String j : js) {
+            for (String[] r : desc.get(j.toUpperCase(Locale.ROOT))) {
+                String n = r[0].toUpperCase(Locale.ROOT);
+                if (isMeta(n) || n.endsWith("_EINH") || n.startsWith("TEL") || n.equals("RESP_CODE")) continue;
+                if (r[1].toLowerCase(Locale.ROOT).contains("binary") || r[1].toLowerCase(Locale.ROOT).contains("data")) continue;
+                if (n.endsWith("_TEXT") && seen.contains(baseOf(n.substring(0, n.length() - 5)))) continue;
+                String b = baseOf(n);
+                if (!seen.add(b)) continue;
+                catalog.add(new LiveItem(j, r[0], liveLabel(r[0], r[2]), r[2]));
+            }
+        }
+        return catalog;
+    }
+
+    private static String baseOf(String n) { return n.replaceAll("(?i)_(WERT|MWB)$", ""); }
+
+    /** ชื่อภาษาไทยของค่า live data */
+    public static String liveLabel(String name, String comment) {
+        String l = ThaiLabels.label(name);
+        if (!l.equals(name)) return l;
+        // ลองใช้รหัสใน comment เช่น "Wert von MSHFM_W"
+        if (comment != null) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)^(?:Wert|Ergebnis|Einheit)\\s+(?:von|der|des)?\\s*([A-Z0-9_]+?)(?:_W)?\\s*$").matcher(comment.trim());
+            if (m.find()) {
+                String c = ThaiLabels.label(m.group(1));
+                if (!c.equals(m.group(1))) return c;
+            }
+        }
+        return ThaiLabels.base(name);
+    }
+
+    /** ค่าแนะนำเริ่มต้น (~8 ค่าสำคัญ) */
+    public List<String> defaultLiveKeys() {
+        String[][] want = {
+                {"NMOT", "MOTORDREHZAHL", "DREHZAHL"}, {"TMOT", "MOTORTEMPERATUR", "MOTORTEMP"},
+                {"TANS", "AN_LUFTTEMPERATUR", "AN_LUFTTEMP"}, {"MSHFM", "LMM_MASSE", "LMM", "ML"},
+                {"UB", "UBATT"}, {"WDKBA", "DKP_WINKEL", "PWG_WINKEL", "DROSSELKLAPPE"},
+                {"ZWOUT", "ZUENDWINKEL", "ZW"}, {"TE", "EINSPRITZZEIT", "TI"}, {"VFZG", "GESCHWINDIGKEIT"},
+                {"OEL_TEMPERATUR", "OEL_TEMP", "TOEL", "GETRIEBEOELTEMPERATUR", "OELTEMPERATUR", "GETRIEBETEMPERATUR"},
+                {"TURBINENDREHZAHL"}, {"ABTRIEBSDREHZAHL"}, {"GANG"}, {"WAEHLHEBEL", "WAEHLHEBELPOSITION"}};
+        List<String> out = new ArrayList<>();
+        List<LiveItem> cat = liveCatalog();
+        for (String[] w : want) {
+            LiveItem best = null;
+            for (String k : w) {
+                for (LiveItem it : cat) if (ThaiLabels.base(it.result).equals(k)) { best = it; break; }
+                if (best != null) break;
+            }
+            if (best != null && !out.contains(best.key())) out.add(best.key());
+        }
+        if (out.isEmpty()) for (int i = 0; i < Math.min(8, cat.size()); i++) out.add(cat.get(i).key());
+        return out;
+    }
+
+    public LiveItem liveItem(String key) {
+        for (LiveItem it : liveCatalog()) if (it.key().equalsIgnoreCase(key)) return it;
+        return null;
     }
 }

@@ -39,4 +39,29 @@ public abstract class EdInterface {
     public String interfaceType() { return "OBD"; }
 
     public long interfaceVersion() { return 209; }
+
+    // ---------- แคชคำตอบระหว่างอ่าน live data 1 รอบ ----------
+    // หลาย job (เช่น STATUS_MOTORDREHZAHL, STATUS_UBATT ของ MS42/MS43) ส่งคำสั่งเดียวกัน (0B 03)
+    // ในรอบเดียวกันส่งไปกล่องครั้งเดียวพอ ที่เหลือใช้คำตอบเดิม → เร็วขึ้นหลายเท่า
+    private java.util.Map<String, byte[]> cache;
+
+    public void beginCycle() { cache = new java.util.HashMap<>(); }
+
+    public void endCycle() { cache = null; }
+
+    protected byte[] cached(byte[] req) {
+        if (cache == null || req == null || req.length == 0) return null;
+        byte[] r = cache.get(key(req));
+        return r == null ? null : r.clone();
+    }
+
+    protected void remember(byte[] req, byte[] resp) {
+        if (cache != null && req != null && req.length > 0 && resp != null) cache.put(key(req), resp.clone());
+    }
+
+    private static String key(byte[] b) {
+        StringBuilder sb = new StringBuilder(b.length * 2);
+        for (byte x : b) sb.append((char) ('A' + ((x >> 4) & 15))).append((char) ('A' + (x & 15)));
+        return sb.toString();
+    }
 }

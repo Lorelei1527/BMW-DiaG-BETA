@@ -29,8 +29,10 @@ public class DiagSession {
         public int p3Ms = 25;
         /** โฟลเดอร์ไฟล์ SGBD ของผู้ใช้ (null = ไม่ใช้) */
         public com.tms.bmwediag.sgbd.SgbdRunner.FileSource sgbdFiles;
-        /** job สถานะที่ใช้ทำ live data ในโหมด SGBD */
-        public String sgbdLiveJob;
+        /** โหมดเร็ว: ลดเวลาพักระหว่างคำสั่ง DS2 (กลับค่าเดิมเองถ้ากล่องไม่ตอบ) */
+        public boolean fast = true;
+        /** ค่า live data ที่เลือกในโหมด SGBD ("JOB|RESULT") — null = ค่าแนะนำ */
+        public List<String> sgbdLiveItems;
     }
 
     public static class Reading {
@@ -55,7 +57,12 @@ public class DiagSession {
 
     public com.tms.bmwediag.sgbd.SgbdRunner sgbd() { return sgbd; }
 
-    public void setSgbdLiveJob(String j) { opt.sgbdLiveJob = j; }
+    public void setSgbdLiveItems(List<String> keys) { opt.sgbdLiveItems = keys == null ? null : new ArrayList<>(keys); }
+
+    public List<String> sgbdLiveItems() {
+        if (opt.sgbdLiveItems == null && isSgbd()) opt.sgbdLiveItems = sgbd.defaultLiveKeys();
+        return opt.sgbdLiveItems == null ? new ArrayList<>() : opt.sgbdLiveItems;
+    }
     /** โปรโตคอลที่ใช้จริงหลังเชื่อมต่อ (AUTO จะกลายเป็น DS2 หรือ KWP) */
     private EcuDef.Protocol proto;
 
@@ -87,14 +94,15 @@ public class DiagSession {
         kline = k;
         k.echo = opt.echo;
         k.logger = logger;
+        k.trace = opt.trace;
         // ---- โหมด SGBD ก่อน (ถ้าผู้ใช้เลือกโฟลเดอร์ SGBD และกล่องนี้มีชื่อ SGBD) ----
         if (opt.sgbdFiles != null && !ecu.sgbd.isEmpty()) {
             try {
                 k.configure(9600, SerialPort.PARITY_EVEN);
                 com.tms.bmwediag.sgbd.SgbdRunner r = new com.tms.bmwediag.sgbd.SgbdRunner(opt.sgbdFiles,
-                        new com.tms.bmwediag.sgbd.KLineInterface(k), this::log);
+                        new com.tms.bmwediag.sgbd.KLineInterface(k, opt.fast, ecu.can), this::log);
                 String v = r.identify(ecu.address, sgbdBaseName());
-                r.identLines(); // ทดสอบว่ากล่องตอบจริง
+                r.run("IDENT", ""); // ทดสอบว่ากล่องตอบจริง
                 sgbd = r;
                 proto = EcuDef.Protocol.DS2;
                 log("เชื่อมต่อด้วย SGBD: " + v);
@@ -161,7 +169,7 @@ public class DiagSession {
         if (proto == EcuDef.Protocol.DS2 && opt.sgbdFiles != null && sgbd == null && ecu.sgbd.isEmpty()) {
             try {
                 com.tms.bmwediag.sgbd.SgbdRunner r = new com.tms.bmwediag.sgbd.SgbdRunner(opt.sgbdFiles,
-                        new com.tms.bmwediag.sgbd.KLineInterface(k), this::log);
+                        new com.tms.bmwediag.sgbd.KLineInterface(k, opt.fast), this::log);
                 String fallback = ecu.sgbd.replaceAll("[^A-Za-z0-9_].*$", "");
                 String v = r.identify(ecu.address, fallback);
                 sgbd = r;
@@ -475,38 +483,58 @@ public class DiagSession {
         return l;
     }
 
+    private static String fmt(double d) {
+        if (d == Math.rint(d) && Math.abs(d) < 1e9) return String.valueOf((long) d);
+        double a = Math.abs(d);
+        return String.format(java.util.Locale.US, a >= 100 ? "%.1f" : a >= 1 ? "%.2f" : "%.3f", d);
+    }
+
     public List<Reading> pollLive() throws IOException {
         List<Reading> out = new ArrayList<>();
         if (isSgbd()) {
-            String jobsSpec = opt.sgbdLiveJob;
-            if (jobsSpec == null || jobsSpec.isEmpty()) {
-                List<String> js = sgbd.statusJobs();
-                if (js.isEmpty()) return out;
-                String[] pref = {"STATUS_MESSWERTE", "STATUS_MESSWERTEBLOCK", "STATUS_LESEN", "STATUS_ANALOG"};
-                jobsSpec = js.get(0);
-                for (String p : pref) if (sgbd.hasJob(p)) { jobsSpec = p; break; }
-                opt.sgbdLiveJob = jobsSpec;
+            // จัดกลุ่มตาม job: แต่ละ job อ่านครั้งเดียวต่อรอบ แล้วดึงเฉพาะค่าที่เลือก
+            java.util.LinkedHashMap<String, List<com.tms.bmwediag.sgbd.SgbdRunner.LiveItem>> byJob = new java.util.LinkedHashMap<>();
+            for (String k : sgbdLiveItems()) {
+                com.tms.bmwediag.sgbd.SgbdRunner.LiveItem it = sgbd.liveItem(k);
+                if (it == null) continue;
+                List<com.tms.bmwediag.sgbd.SgbdRunner.LiveItem> l = byJob.get(it.job);
+                if (l == null) byJob.put(it.job, l = new ArrayList<>());
+                l.add(it);
             }
-            for (String job : jobsSpec.split(",")) {
-            job = job.trim();
-            if (job.isEmpty() || !sgbd.hasJob(job)) continue;
+            java.util.Map<String, Reading> got = new java.util.HashMap<>();
+            sgbd.beginCycle();
             try {
-                List<java.util.Map<String, com.tms.bmwediag.sgbd.Sgbd.Result>> r = sgbd.run(job, "");
-                for (int s = 1; s < r.size(); s++) {
-                    java.util.Map<String, com.tms.bmwediag.sgbd.Sgbd.Result> set = r.get(s);
-                    for (com.tms.bmwediag.sgbd.Sgbd.Result x : set.values()) {
-                        if (com.tms.bmwediag.sgbd.SgbdRunner.isMeta(x.name) || x.name.toUpperCase().endsWith("_EINH")) continue;
-                        String unit = "";
-                        String base = x.name.replaceAll("(?i)_WERT$", "");
-                        com.tms.bmwediag.sgbd.Sgbd.Result u = set.get((base + "_EINH").toUpperCase());
-                        if (u != null) unit = u.asText();
-                        Double v = x.value instanceof Long ? Double.valueOf((Long) x.value) : x.value instanceof Double ? (Double) x.value : null;
-                        out.add(new Reading(base, unit, v, x.asText()));
+            for (java.util.Map.Entry<String, List<com.tms.bmwediag.sgbd.SgbdRunner.LiveItem>> e : byJob.entrySet()) {
+                try {
+                    List<java.util.Map<String, com.tms.bmwediag.sgbd.Sgbd.Result>> r = sgbd.run(e.getKey(), "");
+                    for (com.tms.bmwediag.sgbd.SgbdRunner.LiveItem it : e.getValue()) {
+                        String rn = it.result.toUpperCase(java.util.Locale.ROOT);
+                        String base = rn.replaceAll("_(WERT|MWB)$", "");
+                        Reading rd = null;
+                        for (int s = r.size() - 1; s >= 1 && rd == null; s--) {
+                            java.util.Map<String, com.tms.bmwediag.sgbd.Sgbd.Result> set = r.get(s);
+                            com.tms.bmwediag.sgbd.Sgbd.Result x = set.get(rn);
+                            if (x == null) continue;
+                            com.tms.bmwediag.sgbd.Sgbd.Result u = set.get(base + "_EINH");
+                            String unit = com.tms.bmwediag.sgbd.ThaiLabels.unit(u != null ? u.asText() : "");
+                            Double v = x.value instanceof Long ? Double.valueOf((Long) x.value) : x.value instanceof Double ? (Double) x.value : null;
+                            String txt = x.asText();
+                            if (x.value instanceof Double) txt = fmt((Double) x.value);
+                            com.tms.bmwediag.sgbd.Sgbd.Result t = set.get(base + "_TEXT");
+                            if (t != null && !rn.endsWith("_TEXT") && !t.asText().trim().isEmpty()) txt = txt + "  " + t.asText().trim();
+                            rd = new Reading(it.label, unit, v, txt);
+                        }
+                        got.put(it.key(), rd != null ? rd : new Reading(it.label, "", null, "--"));
                     }
+                } catch (com.tms.bmwediag.sgbd.SgbdException ex) {
+                    for (com.tms.bmwediag.sgbd.SgbdRunner.LiveItem it : e.getValue())
+                        got.put(it.key(), new Reading(it.label, "", null, "ERR " + ex.getMessage()));
                 }
-            } catch (com.tms.bmwediag.sgbd.SgbdException e) {
-                out.add(new Reading(job, "", null, "ERR " + e.getMessage()));
             }
+            } finally { sgbd.endCycle(); }
+            for (String k : sgbdLiveItems()) {
+                com.tms.bmwediag.sgbd.SgbdRunner.LiveItem it = sgbd.liveItem(k);
+                if (it != null && got.containsKey(it.key())) out.add(got.get(it.key()));
             }
             return out;
         }

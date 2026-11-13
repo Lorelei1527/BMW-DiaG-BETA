@@ -47,8 +47,8 @@
    "address": "12",
    "sgbd": "MEV9N46",
    "can": true,
-   "link": "ELM",
-   "notes": "ELM327 Bluetooth (D-CAN) — อ่าน/ลบโค้ด + data สด ผ่าน SGBD; ไม่มี SGBD จะใช้ OBD2 แทน (สาย K+DCAN โหมด D-CAN ยังไม่รองรับ)"
+   "link": "ANY",
+   "notes": "สาย K+DCAN USB (สวิตช์โหมด D-CAN) หรือ ELM327 Bluetooth — อ่าน/ลบโค้ด + data สด ผ่าน SGBD"
   },
   {
    "id": "gs20",

@@ -233,6 +233,46 @@ public class Sgbd {
         }
     }
 
+    /** ผลลัพธ์ของแต่ละ job จากส่วนคำอธิบายในไฟล์ SGBD: job(ตัวใหญ่) -> [ชื่อ, ชนิด, คำอธิบาย] */
+    private Map<String, List<String[]>> jobResults;
+    private final java.util.Set<String> argJobs = new java.util.HashSet<>();
+
+    /** job นี้ต้องใส่ argument หรือไม่ (จากคำอธิบายใน SGBD) */
+    public boolean jobHasArgs(String job) { jobResults(); return argJobs.contains(job.toUpperCase(Locale.ROOT)); }
+
+    public synchronized Map<String, List<String[]>> jobResults() {
+        if (jobResults != null) return jobResults;
+        jobResults = new LinkedHashMap<>();
+        try {
+            int off = rawInt(0x90);
+            if (off < 0) return jobResults;
+            int n = rawInt(off);
+            byte[] b = decBytes(off + 4, Math.min(n, file.length - off - 4));
+            String text = new String(b, StandardCharsets.ISO_8859_1);
+            String job = null;
+            String[] cur = null;
+            for (String line : text.split("\n")) {
+                line = line.replace("\r", "");
+                if (line.startsWith("JOBNAME:")) {
+                    job = line.substring(8).trim().toUpperCase(Locale.ROOT);
+                    jobResults.put(job, new ArrayList<>());
+                    cur = null;
+                } else if (line.startsWith("ARG:") && job != null) {
+                    argJobs.add(job);
+                    cur = null;
+                } else if (line.startsWith("RESULT:") && job != null) {
+                    cur = new String[]{line.substring(7).trim(), "", ""};
+                    jobResults.get(job).add(cur);
+                } else if (line.startsWith("RESULTTYPE:") && cur != null) {
+                    cur[1] = line.substring(11).trim();
+                } else if (line.startsWith("RESULTCOMMENT:") && cur != null) {
+                    cur[2] = cur[2].isEmpty() ? decodeText(line.substring(14).trim()) : cur[2] + " " + decodeText(line.substring(14).trim());
+                }
+            }
+        } catch (RuntimeException ignored) {}
+        return jobResults;
+    }
+
     public List<String> jobNames() {
         List<String> l = new ArrayList<>();
         for (JobInfo j : jobs.values()) l.add(j.name);

@@ -45,14 +45,32 @@ public class KLine {
 
     public void purge() throws IOException { carry.reset(); port.purge(); }
 
-    /** ส่งข้อมูล แล้วอ่าน echo ทิ้ง (K-line เป็นสายเดี่ยว จะได้ข้อมูลที่ส่งกลับมาเสมอ) */
+    /** ตรวจ echo อัตโนมัติ: สาย K-line จะได้ข้อมูลที่ส่งกลับมาเสมอ ถ้าสาย/โหมดไม่มี echo จะปิดเองแล้วเก็บไบต์ไว้เป็นคำตอบ */
+    public boolean autoEcho = true;
+    private boolean echoWarned;
+
+    /** ส่งข้อมูล แล้วอ่าน echo ทิ้ง */
     public void send(byte[] data) throws IOException {
         trace("TX " + Hex.of(data));
         port.write(data);
-        if (echo) {
+        if (!echo) return;
+        if (!autoEcho) {
             byte[] e = readExact(data.length, 300 + data.length * 3);
-            if (e == null) log("! ไม่ได้รับ echo (สายอยู่โหมด D-CAN? หรือปิด echo ในตั้งค่า)");
+            if (e == null) log("! ไม่ได้รับ echo");
+            return;
         }
+        // อ่านเท่าความยาวที่ส่ง แล้วเทียบว่าเป็น echo จริงไหม (ตรวจทุกครั้ง ไม่เสียเวลาเพิ่มเพราะคืนทันทีเมื่อครบ)
+        byte[] e = readUpTo(data.length, 300 + data.length * 3, 30);
+        if (e.length == 0) return; // ไม่มีอะไรกลับมาเลย ยังสรุปไม่ได้
+        boolean same = e.length == data.length;
+        for (int i = 0; same && i < e.length; i++) same = e[i] == data[i];
+        if (same) return;
+        // ไม่ใช่ echo → เป็นคำตอบจากกล่อง เก็บคืนไว้อ่านต่อ
+        byte[] rest = carry.toByteArray();
+        carry.reset();
+        carry.write(e, 0, e.length);
+        carry.write(rest, 0, rest.length);
+        if (!echoWarned) { echoWarned = true; log("สายไม่ส่ง echo กลับ — ใช้ข้อมูลเป็นคำตอบแทน"); }
     }
 
     /** อ่านให้ครบ n ไบต์ภายใน timeout คืน null ถ้าไม่ครบ */
