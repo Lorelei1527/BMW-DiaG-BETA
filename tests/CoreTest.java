@@ -93,7 +93,7 @@ public class CoreTest {
         });
         EcuDef ms45 = null, ms43 = null, obd = null;
         List<EcuDef> defs = DefinitionLoader.parse(new String(Files.readAllBytes(Paths.get("app/src/main/assets/ecus.json")), "UTF-8"));
-        check(defs.size() == 7, "ecus.json โหลดได้ " + defs.size() + " กล่อง");
+        check(defs.size() == 8, "ecus.json โหลดได้ " + defs.size() + " กล่อง");
         obd = DefinitionLoader.parse("{\"ecus\":[{\"id\":\"obd\",\"name\":\"obd\",\"protocol\":\"OBD\"}]}").get(0);
         { EcuDef m43=null; for (EcuDef e : defs) if (e.id.equals("ms43")) m43=e; check(m43 != null && m43.sgbd.equals("MS430DS0") && m43.protocol == EcuDef.Protocol.OBD, "MS43: SGBD MS430DS0 + สำรอง OBD"); }
         // นิยามทดสอบ (ไม่อยู่ใน ecus.json แล้ว)

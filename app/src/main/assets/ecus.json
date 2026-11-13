@@ -5,6 +5,15 @@
  ],
  "ecus": [
   {
+   "id": "bms46",
+   "name": "DME BMS46 — M43 (E46 316i/318i)",
+   "protocol": "OBD",
+   "address": "12",
+   "sgbd": "BMS46DS0",
+   "link": "USB",
+   "notes": "สาย K+DCAN USB (โหมด K-line) — อ่าน/ลบโค้ด + data สด ผ่าน SGBD ภาษาไทย (แอปเลือก BMS46DS0 / DS1 ตามกล่องเอง)"
+  },
+  {
    "id": "ms42",
    "name": "DME MS42 — M52TU / M54 รุ่นแรก (E46/E39)",
    "protocol": "OBD",

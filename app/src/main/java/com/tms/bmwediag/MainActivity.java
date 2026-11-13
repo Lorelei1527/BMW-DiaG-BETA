@@ -500,13 +500,21 @@ public class MainActivity extends Activity {
                 ecuGrid.addView(r, lpm(-1, -2, 0, 0, 0, 0, 8));
             }
             final int idx = i;
-            LinearLayout c = col();
-            c.setPadding(dp(12), dp(10), dp(12), dp(10));
-            c.addView(bold(shortName(ecus.get(i)), 15.5f, TEXT));
+            LinearLayout c = row();
+            c.setGravity(Gravity.CENTER_VERTICAL);
+            c.setPadding(dp(10), dp(10), dp(10), dp(10));
+            EcuIcon icon = new EcuIcon(this, ecus.get(i).name.startsWith("เกียร์") ? EcuIcon.GEAR : EcuIcon.DME);
+            c.addView(icon, lpm(dp(34), dp(34), 0, 0, 0, 8, 0));
+            ((LinearLayout.LayoutParams) icon.getLayoutParams()).width = dp(34);
+            ((LinearLayout.LayoutParams) icon.getLayoutParams()).height = dp(34);
+            c.setTag(icon);
+            LinearLayout tx = col();
+            tx.addView(bold(shortName(ecus.get(i)), 15.5f, TEXT));
             TextView sub = label(subName(ecus.get(i)), 11, MUTED);
             sub.setSingleLine(true);
             sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            c.addView(sub);
+            tx.addView(sub);
+            c.addView(tx, lp(0, -2, 1));
             c.setOnClickListener(v -> selectEcu(idx));
             r.addView(c, lpm(0, -1, 1, 0, 0, i % 2 == 0 ? 4 : 0, 0));
             if (i % 2 == 1) ((LinearLayout.LayoutParams) c.getLayoutParams()).leftMargin = dp(4);
@@ -524,6 +532,8 @@ public class MainActivity extends Activity {
         for (int i = 0; i < ecuCards.size(); i++) {
             boolean on = i == idx;
             ecuCards.get(i).setBackground(round(on ? 0xFF0F1E33 : CARD, on ? M_LIGHT : LINE, 12));
+            Object ic = ecuCards.get(i).getTag();
+            if (ic instanceof EcuIcon) ((EcuIcon) ic).setColor(on ? M_LIGHT : MUTED);
         }
         ecuNotes.setText(ecus.get(idx).notes);
     }
@@ -897,7 +907,7 @@ public class MainActivity extends Activity {
         by.setLetterSpacing(0.25f);
         by.setPadding(0, dp(4), 0, dp(6));
         about.addView(by);
-        TextView ad = label(VERSION + " • DME MS42 / MS43 / ME9.2 (E46) / MS45 / MEV9.2 (E90) • เกียร์ GS20 / GS8.60.4\n"
+        TextView ad = label(VERSION + " • DME BMS46 / MS42 / MS43 / ME9.2 (E46) / MS45 / MEV9.2 (E90) • เกียร์ GS20 / GS8.60.4\n"
                 + "ตัวรัน SGBD พอร์ตจาก EdiabasLib (GPLv3)", 11.5f, MUTED);
         ad.setGravity(Gravity.CENTER);
         about.addView(ad);

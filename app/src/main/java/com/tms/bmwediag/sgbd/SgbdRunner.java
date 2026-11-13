@@ -234,7 +234,58 @@ public class SgbdRunner {
 
     private List<LiveItem> catalog;
 
-    /** รายการค่า live data ทั้งหมดที่เลือกได้ (ชื่อภาษาไทย) — ค่าที่มีใน job บล็อกใหญ่จะใช้ job นั้นก่อน */
+    /**
+     * ค่า live data ที่ใช้งานจริงเท่านั้น (เรียงตามหมวด) — ชื่อหลังตัด STAT_/STATUS_ และ _WERT/_MWB
+     * หมวด: รอบ, โหลด, MAF, ลิ้นปีก/คันเร่ง, องศาไฟ, น็อค, การฉีด, O2/ส่วนผสม, แคม/VANOS/Valvetronic, ไฟแบต, อุณหภูมิ, เกียร์
+     */
+    static final String[][] USEFUL = {
+            {"รอบ", "NMOT", "MOTORDREHZAHL"},
+            {"โหลด", "LAST", "RL"},
+            {"MAF", "MSHFM", "LMM_MASSE", "LMM", "ML"},
+            {"ลิ้นปีก", "WDKBA", "DKP_WINKEL", "DROSSELKLAPPE", "DK1_WINKEL", "DK2_WINKEL", "PWG_WINKEL", "WPED"},
+            {"องศาไฟ", "ZWOUT", "ZUENDWINKEL", "ZWIST"},
+            {"น็อค", "RKRN0", "RKRN1", "RKRN2", "RKRN3", "RKRN4", "RKRN5", "RKRN6", "RKRN7",
+                    "K_MW_1", "K_MW_2", "K_MW_3", "K_MW_4", "K_MW_5", "K_MW_6", "KR", "KLOPF_ADC1", "KLOPF_ADC2", "DWKR"},
+            {"ฉีด", "TE", "EINSPRITZZEIT", "TE2", "TE_TASTVERHAELTNIS"},
+            {"O2", "LS_VKAT_SIGNAL_1", "L_SONDE", "USVK", "UULSUV", "LS_VKAT_SIGNAL_2", "L_SONDE_2", "USVK2", "UULSUV2",
+                    "LS_NKAT_SIGNAL_1", "L_SONDE_H", "USHK", "LS_NKAT_SIGNAL_2", "L_SONDE_2_H", "USHK2", "LAMSONI", "LAMSONI2",
+                    "FR", "INT", "LAMBDA_INTEGRATOR_1", "FR2", "INT_2", "LAMBDA_INTEGRATOR_2",
+                    "ADD", "LAMBDA_ADD_1", "RKAT", "ADD_2", "LAMBDA_ADD_2", "RKAT2",
+                    "MUL", "LAMBDA_MUL_1", "FRA", "MUL_2", "LAMBDA_MUL_2", "FRA2"},
+            {"แคม", "WNWKWE", "VANOS_NW_LAGE_EINLASS", "VANOS_NW_LAGE_EINLASS_IST", "VANOS_NW_LAGE_EINLASS_SOLL",
+                    "WNWKWA", "VANOS_NW_LAGE_AUSLASS", "VANOS_NW_LAGE_AUSLASS_IST", "VANOS_NW_LAGE_AUSLASS_SOLL",
+                    "EVHUBI", "EVHUBS", "EXWINKI", "EXWINKS"},
+            {"แบต", "UB", "UBATT", "UBAT"},
+            {"อุณหภูมิ", "TMOT", "MOTORTEMPERATUR", "TKA", "KUEHLW_AUSL_TEMPERATUR", "OEL_TEMPERATUR", "TOEL", "TANS", "AN_LUFTTEMPERATUR"},
+            {"เกียร์", "GETRIEBETEMPERATUR", "GETRIEBEOELTEMPERATUR", "OELTEMPERATUR", "TURBINENDREHZAHL", "STEGDREHZAHL",
+                    "ABTRIEBSDREHZAHL", "GANG", "WAEHLHEBEL", "WAEHLHEBELPOSITION", "WANDLERSCHLUPF", "SCHLUPF_WANDLER",
+                    "EDS1", "EDS2", "EDS3", "EDS4", "EDS5", "EDS6", "DKG"},
+    };
+
+    /** จำนวนสูบตามรุ่นกล่อง: ME9.2 / MEV9.2 (N42/N46) และ BMS43/46 (M43) = 4 สูบ, MS42/43/45 (M52/M54) = 6 สูบ */
+    public int cylinders() {
+        String v = variantName.toUpperCase(Locale.ROOT);
+        if (v.startsWith("ME9") || v.startsWith("MEV9") || v.startsWith("BMS4")) return 4;
+        return 6;
+    }
+
+    /** ตัดค่าน็อคของสูบที่ไม่มีจริงออก (เช่น RKRN4-7 บนเครื่อง 4 สูบ) */
+    private boolean cylinderOk(String base) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^RKRN(\\d)$").matcher(base);
+        if (m.find()) return Integer.parseInt(m.group(1)) < cylinders();
+        m = java.util.regex.Pattern.compile("^K_MW_(\\d)$").matcher(base);
+        if (m.find()) return Integer.parseInt(m.group(1)) <= cylinders();
+        return true;
+    }
+
+    private static int usefulRank(String base) {
+        int i = 0;
+        for (String[] g : USEFUL)
+            for (int k = 1; k < g.length; k++, i++) if (g[k].equals(base)) return i;
+        return -1;
+    }
+
+    /** รายการค่า live data ที่เลือกได้ (เฉพาะค่าที่ใช้งานจริง ชื่อภาษาไทย) — ค่าที่มีใน job บล็อกใหญ่จะใช้ job นั้นก่อน */
     public List<LiveItem> liveCatalog() {
         if (catalog != null) return catalog;
         catalog = new ArrayList<>();
@@ -244,18 +295,24 @@ public class SgbdRunner {
         for (String j : statusJobs()) if (!variant.jobHasArgs(j) && desc.containsKey(j.toUpperCase(Locale.ROOT))) js.add(j);
         // job ที่คืนค่าหลายตัวก่อน (อ่านทีเดียวได้หลายค่า)
         js.sort((a, b) -> desc.get(b.toUpperCase(Locale.ROOT)).size() - desc.get(a.toUpperCase(Locale.ROOT)).size());
-        java.util.Set<String> seen = new java.util.HashSet<>();
+        java.util.Set<String> seen = new java.util.HashSet<>(), seenLabel = new java.util.HashSet<>();
+        final java.util.Map<LiveItem, Integer> rank = new java.util.HashMap<>();
         for (String j : js) {
             for (String[] r : desc.get(j.toUpperCase(Locale.ROOT))) {
                 String n = r[0].toUpperCase(Locale.ROOT);
-                if (isMeta(n) || n.endsWith("_EINH") || n.startsWith("TEL") || n.equals("RESP_CODE")) continue;
-                if (r[1].toLowerCase(Locale.ROOT).contains("binary") || r[1].toLowerCase(Locale.ROOT).contains("data")) continue;
-                if (n.endsWith("_TEXT") && seen.contains(baseOf(n.substring(0, n.length() - 5)))) continue;
-                String b = baseOf(n);
-                if (!seen.add(b)) continue;
-                catalog.add(new LiveItem(j, r[0], liveLabel(r[0], r[2]), r[2]));
+                if (isMeta(n) || n.endsWith("_EINH") || n.endsWith("_TEXT") || n.startsWith("TEL") || n.equals("RESP_CODE")) continue;
+                String t = r[1].toLowerCase(Locale.ROOT);
+                if (t.contains("binary") || t.contains("data")) continue;
+                String b = ThaiLabels.base(n);
+                int rk = usefulRank(b);
+                if (rk < 0 || !cylinderOk(b) || !seen.add(b)) continue;
+                LiveItem it = new LiveItem(j, r[0], liveLabel(r[0], r[2]), r[2]);
+                if (!seenLabel.add(it.label)) continue; // ค่าเดียวกันชื่อซ้ำ (เช่น L_SONDE กับ LS_VKAT_SIGNAL_1)
+                rank.put(it, rk);
+                catalog.add(it);
             }
         }
+        catalog.sort((x, y) -> rank.get(x) - rank.get(y));
         return catalog;
     }
 
@@ -279,12 +336,13 @@ public class SgbdRunner {
     /** ค่าแนะนำเริ่มต้น (~8 ค่าสำคัญ) */
     public List<String> defaultLiveKeys() {
         String[][] want = {
-                {"NMOT", "MOTORDREHZAHL", "DREHZAHL"}, {"TMOT", "MOTORTEMPERATUR", "MOTORTEMP"},
-                {"TANS", "AN_LUFTTEMPERATUR", "AN_LUFTTEMP"}, {"MSHFM", "LMM_MASSE", "LMM", "ML"},
-                {"UB", "UBATT"}, {"WDKBA", "DKP_WINKEL", "PWG_WINKEL", "DROSSELKLAPPE"},
-                {"ZWOUT", "ZUENDWINKEL", "ZW"}, {"TE", "EINSPRITZZEIT", "TI"}, {"VFZG", "GESCHWINDIGKEIT"},
-                {"OEL_TEMPERATUR", "OEL_TEMP", "TOEL", "GETRIEBEOELTEMPERATUR", "OELTEMPERATUR", "GETRIEBETEMPERATUR"},
-                {"TURBINENDREHZAHL"}, {"ABTRIEBSDREHZAHL"}, {"GANG"}, {"WAEHLHEBEL", "WAEHLHEBELPOSITION"}};
+                {"NMOT", "MOTORDREHZAHL"}, {"TMOT", "MOTORTEMPERATUR"}, {"OEL_TEMPERATUR", "TOEL"},
+                {"MSHFM", "LMM_MASSE", "LMM", "ML"}, {"LAST", "RL"}, {"WDKBA", "DKP_WINKEL", "DROSSELKLAPPE"},
+                {"ZWOUT", "ZUENDWINKEL"}, {"TE", "EINSPRITZZEIT"}, {"LS_VKAT_SIGNAL_1", "L_SONDE", "USVK", "UULSUV"},
+                {"FR", "INT", "LAMBDA_INTEGRATOR_1"}, {"RKRN0", "K_MW_1", "KR"}, {"WNWKWE", "VANOS_NW_LAGE_EINLASS", "EVHUBI"},
+                {"UB", "UBATT", "UBAT"},
+                {"GETRIEBETEMPERATUR", "GETRIEBEOELTEMPERATUR", "OELTEMPERATUR"}, {"TURBINENDREHZAHL", "STEGDREHZAHL"},
+                {"ABTRIEBSDREHZAHL"}, {"GANG"}, {"WAEHLHEBEL", "WAEHLHEBELPOSITION"}};
         List<String> out = new ArrayList<>();
         List<LiveItem> cat = liveCatalog();
         for (String[] w : want) {

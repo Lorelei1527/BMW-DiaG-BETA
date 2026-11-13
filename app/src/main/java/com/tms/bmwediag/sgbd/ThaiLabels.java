@@ -30,7 +30,7 @@ public final class ThaiLabels {
         e("UPWG", "แรงดันคันเร่ง"); e("PWG_WINKEL", "ตำแหน่งคันเร่ง"); e("PWG", "ตำแหน่งคันเร่ง"); e("GASPEDAL", "คันเร่ง (ตัวที่ 1)"); e("GASPEDAL_2", "คันเร่ง (ตัวที่ 2)");
         e("WDKBA", "มุมลิ้นปีกผีเสื้อ"); e("DKP_WINKEL", "มุมลิ้นปีกผีเสื้อ"); e("DROSSELKLAPPE", "มุมลิ้นปีกผีเสื้อ"); e("WDK", "มุมลิ้นปีกผีเสื้อ");
         e("ZWOUT", "องศาจุดระเบิด"); e("ZUENDWINKEL", "องศาจุดระเบิด"); e("ZW", "องศาจุดระเบิด");
-        e("TE", "เวลาฉีดน้ำมัน"); e("EINSPRITZZEIT", "เวลาฉีดน้ำมัน"); e("ZEIT_EINSPRITZ", "เวลาฉีดน้ำมัน"); e("TI", "เวลาฉีดน้ำมัน");
+        e("TE", "เวลาฉีดน้ำมัน"); e("TE_TASTVERHAELTNIS", "Duty หัวฉีด"); e("EINSPRITZZEIT", "เวลาฉีดน้ำมัน"); e("ZEIT_EINSPRITZ", "เวลาฉีดน้ำมัน"); e("TI", "เวลาฉีดน้ำมัน");
         e("FR", "Lambda correction (STFT) B1"); e("FR2", "Lambda correction (STFT) B2");
         e("INT", "Lambda correction (STFT) B1"); e("INT_2", "Lambda correction (STFT) B2");
         e("LAMBDA_INTEGRATOR_1", "Lambda correction (STFT) B1"); e("LAMBDA_INTEGRATOR_2", "Lambda correction (STFT) B2");

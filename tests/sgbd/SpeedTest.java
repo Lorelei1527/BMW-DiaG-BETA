@@ -64,6 +64,7 @@ public class SpeedTest {
     }
     public static void main(String[] a) throws Exception {
         List<EcuDef> defs=DefinitionLoader.parse(new String(Files.readAllBytes(Paths.get("app/src/main/assets/ecus.json")),"UTF-8"));
+        run(defs,"bms46",0x12,"DS2",true,true);
         run(defs,"ms42",0x12,"DS2",true,true);
         run(defs,"ms42",0x12,"DS2",true,false);
         run(defs,"ms42",0x12,"DS2",false,true);

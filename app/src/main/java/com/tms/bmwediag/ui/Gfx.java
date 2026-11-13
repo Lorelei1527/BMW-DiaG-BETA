@@ -239,4 +239,68 @@ public final class Gfx {
             }
         }
     }
+
+    /** ไอคอนกล่อง: DME = กล่อง ECU มีครีบ + ขั้วต่อ, GEAR = เฟือง (กล่องเกียร์) */
+    public static final class EcuIcon extends View {
+        public static final int DME = 0, GEAR = 1;
+        private final int kind;
+        private int color = MUTED;
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        public EcuIcon(Context c, int kind) { super(c); this.kind = kind; }
+
+        public void setColor(int col) { color = col; invalidate(); }
+
+        @Override protected void onDraw(Canvas c) {
+            float s = Math.min(getWidth(), getHeight());
+            float ox = (getWidth() - s) / 2f, oy = (getHeight() - s) / 2f;
+            p.setColor(color);
+            p.setStrokeWidth(s * 0.06f);
+            p.setStrokeCap(Paint.Cap.ROUND);
+            p.setStrokeJoin(Paint.Join.ROUND);
+            if (kind == DME) {
+                // ตัวกล่อง
+                p.setStyle(Paint.Style.STROKE);
+                RectF box = new RectF(ox + s * 0.10f, oy + s * 0.22f, ox + s * 0.90f, oy + s * 0.80f);
+                c.drawRoundRect(box, s * 0.08f, s * 0.08f, p);
+                // ครีบระบายความร้อน
+                for (int i = 0; i < 4; i++) {
+                    float x = ox + s * (0.30f + i * 0.13f);
+                    c.drawLine(x, oy + s * 0.34f, x, oy + s * 0.56f, p);
+                }
+                // ขั้วต่อด้านล่าง
+                p.setStyle(Paint.Style.FILL);
+                c.drawRoundRect(new RectF(ox + s * 0.22f, oy + s * 0.80f, ox + s * 0.78f, oy + s * 0.92f), s * 0.03f, s * 0.03f, p);
+                // หูยึด
+                c.drawCircle(ox + s * 0.18f, oy + s * 0.30f, s * 0.035f, p);
+                c.drawCircle(ox + s * 0.82f, oy + s * 0.30f, s * 0.035f, p);
+                // ไฟสถานะ 3 สี
+                int[] cols = {M_LIGHT, M_BLUE, M_RED};
+                for (int i = 0; i < 3; i++) {
+                    p.setColor(cols[i]);
+                    c.drawRect(ox + s * (0.30f + i * 0.13f), oy + s * 0.64f, ox + s * (0.40f + i * 0.13f), oy + s * 0.69f, p);
+                }
+            } else {
+                // เฟือง
+                float cx = ox + s / 2f, cy = oy + s / 2f, r1 = s * 0.30f, r2 = s * 0.42f;
+                Path g = new Path();
+                int teeth = 8;
+                for (int i = 0; i < teeth * 2; i++) {
+                    double a0 = Math.PI * 2 * i / (teeth * 2), a1 = Math.PI * 2 * (i + 1) / (teeth * 2);
+                    float r = (i % 2 == 0) ? r2 : r1;
+                    float x0 = cx + (float) Math.cos(a0) * r, y0 = cy + (float) Math.sin(a0) * r;
+                    float x1 = cx + (float) Math.cos(a1) * r, y1 = cy + (float) Math.sin(a1) * r;
+                    if (i == 0) g.moveTo(x0, y0); else g.lineTo(x0, y0);
+                    g.lineTo(x1, y1);
+                }
+                g.close();
+                p.setStyle(Paint.Style.STROKE);
+                c.drawPath(g, p);
+                c.drawCircle(cx, cy, s * 0.13f, p);
+                p.setStyle(Paint.Style.FILL);
+                p.setColor(M_RED);
+                c.drawCircle(cx, cy, s * 0.05f, p);
+            }
+        }
+    }
 }
